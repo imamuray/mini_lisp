@@ -26,11 +26,18 @@ typedef lval*(*lbuiltin)(lenv*, lval*);
 struct lval {
   int type;
 
+  /* Basic */
   long num;
   char* err;
   char* sym;
-  lbuiltin fun;
+
+  /* Function */
+  lbuiltin builtin;
+  lenv* env;
+  lval* formals;
+  lval* body;
   
+  /* Expression */
   int count;  // the number of cell
   struct lval** cell;
 };
@@ -69,6 +76,7 @@ void lval_expr_print(lval* v, char open, char close);
 
 struct lenv {
   bool isexit;
+  lenv* par;
   int count;
   char** syms;
   lval** vals;
@@ -79,6 +87,8 @@ void lenv_del(lenv* e);
 
 lval* lenv_get(lenv* e, lval* k);
 void lenv_put(lenv* e, lval* k, lval* v);
+lenv* lenv_copy(lenv* e);
+void lenv_def(lenv* e, lval* k, lval* v);
 
 /* Builtins */
 #define LASSERT(args, cond, fmt, ...) \
@@ -122,8 +132,16 @@ lval* builtin_join(lenv* e, lval* a);
 lval* builtin_def(lenv* e, lval* a);
 lval* builtin_exit(lenv* e, lval* a);
 
+lval* builtin_def(lenv* e, lval* a);
+lval* builtin_put(lenv* e, lval* a);
+lval* builtin_var(lenv* e, lval* a, char* func);
+lval* lval_call(lenv* e, lval* f, lval* a);
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func);
 void lenv_add_builtins(lenv* e);
+
+lval* lval_lambda(lval* formals, lval* body);
+lval* builtin_lambda(lenv* e, lval* a);
 
 /* Evaluation */
 lval* lval_eval(lenv* e, lval* v);
