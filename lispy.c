@@ -194,6 +194,7 @@ void lval_expr_print(lval* v, char open, char close) {
 
 lenv* lenv_new(void) {
   lenv* e = malloc(sizeof(lenv));
+  e->isexit = false;
   e->count = 0;
   e->syms = NULL;
   e->vals = NULL;
@@ -383,6 +384,12 @@ lval* builtin_def(lenv* e, lval* a) {
   return lval_sexpr();
 }
 
+lval* builtin_exit(lenv* e, lval* a) {
+  LASSERT_EMPTY("exit", a, 0);
+  e->isexit = true;
+  return a;
+}
+
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func) {
   lval* k = lval_sym(name);
   lval* v = lval_fun(func);
@@ -399,6 +406,7 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "eval", builtin_eval);
   lenv_add_builtin(e, "join", builtin_join);
   lenv_add_builtin(e, "def",  builtin_def);
+  lenv_add_builtin(e, "exit", builtin_exit);
 
   /* Mathmatical Functions */
   lenv_add_builtin(e, "+", builtin_add);
@@ -520,7 +528,7 @@ int main(int argc, char* argv[]) {
   lenv* e = lenv_new();
   lenv_add_builtins(e);
 
-  while (1) {
+  while (!e->isexit) {
     char* input = readline("lispy> ");
     add_history(input);
 
@@ -539,6 +547,8 @@ int main(int argc, char* argv[]) {
 
   lenv_del(e);
   mpc_cleanup(6, Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
+
+  puts("bye");
 
   return 0;
 }

@@ -1,5 +1,7 @@
 #include "mpc.h"
 
+#include <stdbool.h>
+
 #include <editline/readline.h>
 #include <editline/history.h>
 
@@ -66,6 +68,7 @@ void lval_expr_print(lval* v, char open, char close);
 /* Lisp Environmnet */
 
 struct lenv {
+  bool isexit;
   int count;
   char** syms;
   lval** vals;
@@ -100,6 +103,11 @@ void lenv_put(lenv* e, lval* k, lval* v);
       "Function '%s' passed {} for argument %i.", \
       func, index)
 
+#define LASSERT_EMPTY(func, args, index) \
+  LASSERT(args, args->cell[index]->count == 0, \
+      "Function '%s' need not argumets.", \
+      func)
+
 lval* builtin_op(lenv* e, lval* a, char* op);
 lval* builtin_add(lenv* e, lval* a);
 lval* builtin_sub(lenv* e, lval* a);
@@ -112,6 +120,7 @@ lval* builtin_list(lenv* e, lval* a);
 lval* builtin_eval(lenv* e, lval* a);
 lval* builtin_join(lenv* e, lval* a);
 lval* builtin_def(lenv* e, lval* a);
+lval* builtin_exit(lenv* e, lval* a);
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func);
 void lenv_add_builtins(lenv* e);
