@@ -3,10 +3,17 @@
 #include <editline/readline.h>
 #include <editline/history.h>
 
+/* Forward Declarations */
+
 struct lval;
 struct lenv;
 typedef struct lval lval;
 typedef struct lenv lenv;
+
+/* Lisp Value */
+
+enum { LVAL_ERR, LVAL_NUM,   LVAL_SYM,
+       LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
 
 /* lbuiltin must be a function pointer 
  * that takes an lenv* and a lval* and
@@ -25,15 +32,6 @@ struct lval {
   int count;  // the number of cell
   struct lval** cell;
 };
-
-struct lenv {
-  int count;
-  char** syms;
-  lval** vals;
-};
-
-enum { LVAL_ERR, LVAL_NUM,   LVAL_SYM,
-       LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
 
 char* ltype_name(int t) {
   switch (t) {
@@ -54,7 +52,24 @@ lval* lval_fun(lbuiltin func);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
 void lval_del(lval* v);
+
 lval* lval_copy(lval* v);
+lval* lval_add(lval* v, lval* x);
+lval* lval_join(lval* x, lval* y);
+lval* lval_pop(lval* v, int i);
+lval* lval_take(lval* v, int i);
+
+void lval_print(lval* v);
+void lval_println(lval* v);
+void lval_expr_print(lval* v, char open, char close);
+
+/* Lisp Environmnet */
+
+struct lenv {
+  int count;
+  char** syms;
+  lval** vals;
+};
 
 lenv* lenv_new(void);
 void lenv_del(lenv* e);
@@ -62,19 +77,7 @@ void lenv_del(lenv* e);
 lval* lenv_get(lenv* e, lval* k);
 void lenv_put(lenv* e, lval* k, lval* v);
 
-lval* lval_read_num(mpc_ast_t* t);
-lval* lval_read(mpc_ast_t* t);
-lval* lval_add(lval* v, lval* x);
-
-void lval_expr_print(lval* v, char open, char close);
-void lval_print(lval* v);
-void lval_println(lval* v);
-
-lval* lval_eval_sexpr(lenv* e, lval* v);
-lval* lval_eval(lenv* e, lval* v);
-lval* lval_pop(lval* v, int i);
-lval* lval_take(lval* v, int i);
-
+/* Builtins */
 #define LASSERT(args, cond, fmt, ...) \
   if (!(cond)) { \
     lval* err = lval_err(fmt, ##__VA_ARGS__); \
@@ -108,9 +111,15 @@ lval* builtin_tail(lenv* e, lval* a);
 lval* builtin_list(lenv* e, lval* a);
 lval* builtin_eval(lenv* e, lval* a);
 lval* builtin_join(lenv* e, lval* a);
-lval* lval_join(lval* x, lval* y);
 lval* builtin_def(lenv* e, lval* a);
 
 void lenv_add_builtin(lenv* e, char* name, lbuiltin func);
 void lenv_add_builtins(lenv* e);
 
+/* Evaluation */
+lval* lval_eval(lenv* e, lval* v);
+lval* lval_eval_sexpr(lenv* e, lval* v);
+
+/* Reading */
+lval* lval_read(mpc_ast_t* t);
+lval* lval_read_num(mpc_ast_t* t);
