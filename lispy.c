@@ -477,13 +477,16 @@ lval* builtin_var(lenv* e, lval* a, char* func) {
 }
 
 lval* lval_call(lenv* e, lval* f, lval* a) {
+  /* If Builtin then simply apply that */
   if (f->builtin) {
     return f->builtin(e, a);
   }
 
+  /* Record Argument Counts */
   int given = a->count;
   int total = f->formals->count;
 
+  /* While arguments still remain to be processed */
   while (a->count) {
     if (f->formals->count == 0) {
       lval_del(a);
@@ -492,16 +495,58 @@ lval* lval_call(lenv* e, lval* f, lval* a) {
           "Got %i, Expected %i.", given, total);
     }
 
+    /* Pop the first symbol from the formals */
     lval* sym = lval_pop(f->formals, 0);
+
+    /* Special Case to deal with '&' */
+    if (strcmp(sym->sym, "&") == 0) {
+      /* Ensure '&' is followed by another symbol */
+      if (f->formals->count != 1) {
+        lval_del(a);
+        return lval_err("Function format invalid. "
+            "Symbol '&' not followed by single symbol.");
+      }
+
+      /* Next formal should be bound to remaining arguments */
+      lval* nsym = lval_pop(f->formals, 0);
+      lenv_put(f->env, nsym, builtin_list(e, a));
+      lval_del(sym);
+      lval_del(nsym);
+      break;
+    }
+
+    /* Pop the next argument from the list */
     lval* val = lval_pop(a, 0);
     /* Bind a copy into the function's environment */
     lenv_put(f->env, sym, val);
+
     lval_del(sym);
     lval_del(val);
   }
 
   /* Argument list is now bound so can be cleand up */
   lval_del(a);
+
+  /* If '&' remains in fromal list bind to empty list */
+  if (f->formals->count > 0 &&
+      strcmp(f->formals->cell[0]->sym, "&") == 0) {
+    if (f->formals->count != 2) {
+      return lval_err("Function format invalid. "
+          "Symbol '&' not followed by single symbol.");
+    }
+
+    /* Pop and delete '&' symbol */
+    lval_del(lval_pop(f->formals, 0));
+
+    /* Pop next symbol and create empty list */
+    lval* sym = lval_pop(f->formals, 0);
+    lval* val = lval_qexpr();
+
+    /* Bind to environment and delete */
+    lenv_put(f->env, sym, val);
+    lval_del(sym);
+    lval_del(val);
+  }
 
   /* If all formals have been bound evaluate */
   if (f->formals->count == 0) {
@@ -691,7 +736,7 @@ int main(int argc, char* argv[]) {
       ",
       Number, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
-  puts("Lispy Version 0.0.0.0.7");
+  puts("Lispy Version 0.0.0.0.8");
   puts("Press Ctrl+c to Exit\n");
 
   lenv* e = lenv_new();
